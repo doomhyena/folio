@@ -24,3 +24,7 @@ A régi alkalmazás optimalizálása és a régóta ígért funkciók lefejleszt
 ## Elérhető lesz IOS-re?
 
 Nem, mivel teljes mértékben a Material You-ra épül
+
+## Van dokumentáció a KRÉTA APIról?
+
+Van! A KRÉTA API dokumentáció [itt érhető el](https://docs.zan1456.dev/e-kreta/app).
