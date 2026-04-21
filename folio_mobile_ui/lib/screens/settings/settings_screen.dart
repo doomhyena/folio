@@ -22,6 +22,7 @@ import 'dart:io';
 
 import 'package:folio/helpers/notification_helper.dart';
 import 'package:folio/api/providers/database_provider.dart';
+import 'package:folio/api/providers/wear_provider.dart';
 import 'package:i18n_extension/i18n_extension.dart';
 import 'package:folio/helpers/quick_actions.dart';
 import 'package:folio/helpers/subject.dart';
@@ -77,6 +78,7 @@ class SettingsScreenState extends State<SettingsScreen>
     with SingleTickerProviderStateMixin {
   int devmodeCountdown = 5;
   Future<Map>? futureRelease;
+  String? _lastShownPairingCode;
 
   late UserProvider user;
   late UpdateProvider updateProvider;
@@ -2448,6 +2450,24 @@ class SettingsScreenState extends State<SettingsScreen>
 
       // ── OTHER ────────────────────────────────────────────────
 
+      // WearOS sync (Android only)
+      if (Platform.isAndroid)
+        _SettingsSection(
+          category: 'other',
+          searchTerms: [
+            'wear',
+            'wearos',
+            'óra',
+            'watch',
+            'okosóra',
+            'szinkronizáció',
+            'sync',
+            'párosítás',
+            'pairing',
+          ],
+          widget: _buildWearSection(context),
+        ),
+
       // Presentation mode
       _SettingsSection(
         category: 'other',
@@ -2637,6 +2657,191 @@ class SettingsScreenState extends State<SettingsScreen>
   }
 
   void _openPrivacy(BuildContext context) => PrivacyView.show(context);
+
+  // ── WearOS sync section ──────────────────────────────────────────────────
+
+  Widget _buildWearSection(BuildContext context) {
+    return Consumer<WearProvider>(
+      builder: (context, wear, _) {
+        final connected = wear.watchConnected;
+        final syncEnabled = wear.syncEnabled;
+        final lastSync = wear.lastSync;
+        final pendingCode = wear.pendingPairCode;
+
+        // Auto-show pairing modal when a new request arrives (guard: only once per code)
+        if (pendingCode != null && pendingCode != _lastShownPairingCode) {
+          _lastShownPairingCode = pendingCode;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) _showPairingDialog(context, wear, pendingCode);
+          });
+        }
+
+        String lastSyncText = 'Még nem szinkronizált';
+        if (lastSync != null) {
+          final diff = DateTime.now().difference(lastSync);
+          if (diff.inMinutes < 1) {
+            lastSyncText = 'Most szinkronizált';
+          } else if (diff.inHours < 1) {
+            lastSyncText = '${diff.inMinutes} perce';
+          } else if (diff.inDays < 1) {
+            lastSyncText = '${diff.inHours} órája';
+          } else {
+            lastSyncText = '${diff.inDays} napja';
+          }
+        }
+
+        return Padding(
+          padding: EdgeInsets.zero,
+          child: SplittedPanel(
+            padding:
+                const EdgeInsets.only(bottom: 14.0, left: 24.0, right: 24.0),
+            cardPadding: const EdgeInsets.all(4.0),
+            isSeparated: false,
+            children: [
+              // ── Pairing request banner ──────────────────────────────
+              if (pendingCode != null)
+                PanelButton(
+                  padding: const EdgeInsets.only(left: 14.0, right: 14.0),
+                  onPressed: () => _showPairingDialog(context, wear, pendingCode),
+                  title: const Text(
+                    'WearOS app találva — Csatlakoztatás',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  leading: const Icon(Icons.watch_rounded,
+                      size: 22.0, color: Colors.green),
+                  trailing: const Icon(Icons.arrow_forward_rounded,
+                      size: 18.0, color: Colors.green),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(12.0),
+                    bottom: Radius.circular(4.0),
+                  ),
+                ),
+              // ── Sync toggle ─────────────────────────────────────────
+              PanelButton(
+                padding: const EdgeInsets.only(left: 14.0, right: 6.0),
+                onPressed: () {
+                  _haptic();
+                  wear.setSyncEnabled(!syncEnabled);
+                },
+                title: Text(
+                  'WearOS szinkronizáció',
+                  style: TextStyle(
+                    color: AppColors.of(context)
+                        .text
+                        .withValues(alpha: syncEnabled ? .95 : .25),
+                  ),
+                ),
+                leading: Icon(
+                  Icons.watch_rounded,
+                  size: 22.0,
+                  color: AppColors.of(context)
+                      .text
+                      .withValues(alpha: syncEnabled ? .95 : .25),
+                ),
+                trailingDivider: true,
+                trailing: Switch(
+                  onChanged: (v) {
+                    _haptic();
+                    wear.setSyncEnabled(v);
+                  },
+                  value: syncEnabled,
+                  activeColor: Theme.of(context).colorScheme.secondary,
+                ),
+                borderRadius: BorderRadius.vertical(
+                  top: pendingCode != null
+                      ? Radius.zero
+                      : const Radius.circular(12.0),
+                  bottom: const Radius.circular(4.0),
+                ),
+              ),
+              PanelButton(
+                padding: const EdgeInsets.only(left: 14.0, right: 14.0),
+                onPressed: () async {
+                  _haptic();
+                  await wear.refreshConnection();
+                  setState(() {});
+                },
+                title: Text(
+                  connected ? 'Óra csatlakoztatva' : 'Nincs csatlakoztatva',
+                  style: TextStyle(
+                    color: AppColors.of(context).text.withValues(alpha: .85),
+                  ),
+                ),
+                leading: Icon(
+                  connected ? Icons.watch_rounded : Icons.watch_off_rounded,
+                  size: 22.0,
+                  color: connected
+                      ? Colors.green
+                      : AppColors.of(context).text.withValues(alpha: .35),
+                ),
+                trailing: Text(
+                  connected ? 'Aktív' : 'Nincs',
+                  style: TextStyle(
+                    fontSize: 13.0,
+                    color: connected
+                        ? Colors.green
+                        : AppColors.of(context).text.withValues(alpha: .35),
+                  ),
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(4.0),
+                  bottom: Radius.circular(4.0),
+                ),
+              ),
+              PanelButton(
+                padding: const EdgeInsets.only(left: 14.0, right: 14.0),
+                onPressed: syncEnabled
+                    ? () async {
+                        _haptic();
+                        await wear.forceSyncToWatch(context);
+                        setState(() {});
+                      }
+                    : null,
+                title: Text(
+                  'Manuális szinkronizálás',
+                  style: TextStyle(
+                    color: AppColors.of(context)
+                        .text
+                        .withValues(alpha: syncEnabled ? .85 : .35),
+                  ),
+                ),
+                leading: Icon(
+                  Icons.sync_rounded,
+                  size: 22.0,
+                  color: AppColors.of(context)
+                      .text
+                      .withValues(alpha: syncEnabled ? .85 : .35),
+                ),
+                trailing: Text(
+                  lastSyncText,
+                  style: TextStyle(
+                    fontSize: 12.0,
+                    color: AppColors.of(context).text.withValues(alpha: .4),
+                  ),
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(4.0),
+                  bottom: Radius.circular(12.0),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showPairingDialog(
+      BuildContext context, WearProvider wear, String expectedCode) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _PairingDialog(wear: wear),
+    ).then((_) {
+      // Reset guard so a future pairing request can auto-show again
+      _lastShownPairingCode = null;
+    });
+  }
 }
 
 // ── Inline Theme Color Picker ─────────────────────────────────────────────
@@ -2825,6 +3030,95 @@ class _ColorDot extends StatelessWidget {
                     size: 18.0, color: Colors.white)
                 : null,
       ),
+    );
+  }
+}
+
+// ── Pairing Dialog ────────────────────────────────────────────────────────────
+
+class _PairingDialog extends StatefulWidget {
+  final WearProvider wear;
+  const _PairingDialog({required this.wear});
+
+  @override
+  State<_PairingDialog> createState() => _PairingDialogState();
+}
+
+class _PairingDialogState extends State<_PairingDialog> {
+  final _codeController = TextEditingController();
+  final _focusNode = FocusNode();
+  bool _isError = false;
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+      icon: const Icon(Icons.watch_rounded, size: 36.0, color: Colors.green),
+      title: const Text(
+        'WearOS app találva',
+        textAlign: TextAlign.center,
+        style: TextStyle(fontWeight: FontWeight.w700),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Add meg az órán megjelenő 6 jegyű kódot a párosításhoz.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13.5),
+          ),
+          const SizedBox(height: 16.0),
+          TextField(
+            controller: _codeController,
+            focusNode: _focusNode,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            maxLength: 6,
+            style: const TextStyle(
+                fontSize: 24.0,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 8.0),
+            decoration: InputDecoration(
+              hintText: '------',
+              counterText: '',
+              errorText: _isError ? 'Helytelen kód' : null,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.0)),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            widget.wear.dismissPairingRequest();
+            Navigator.pop(context);
+          },
+          child: const Text('Mégse'),
+        ),
+        FilledButton(
+          onPressed: () async {
+            final ok = await widget.wear
+                .confirmPairing(_codeController.text.trim());
+            if (ok) {
+              if (mounted) Navigator.pop(context);
+            } else {
+              setState(() => _isError = true);
+              _focusNode.requestFocus();
+            }
+          },
+          child: const Text('Csatlakoztatás'),
+        ),
+      ],
     );
   }
 }

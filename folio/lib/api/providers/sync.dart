@@ -16,6 +16,7 @@ import 'package:folio_kreta_api/providers/homework_provider.dart';
 import 'package:folio_kreta_api/providers/message_provider.dart';
 import 'package:folio_kreta_api/providers/note_provider.dart';
 import 'package:folio_kreta_api/providers/timetable_provider.dart';
+import 'package:folio/api/providers/wear_provider.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
@@ -130,7 +131,11 @@ Future<void> syncAll(BuildContext context) async {
     }()),
   ];
 
-  return Future.wait(tasks).then((value) {
+  return Future.wait(tasks).then((_) {
     lock = false;
+    // Push fresh data to the paired WearOS watch (no-op if not paired/enabled)
+    try {
+      Provider.of<WearProvider>(context, listen: false).syncToWatch(context);
+    } catch (_) {}
   });
 }

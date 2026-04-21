@@ -169,4 +169,8 @@ dependencies {
     implementation 'androidx.window:window-java:1.0.0'
     // HyperIsland-ToolKit: Xiaomi HyperOS Living Island support
     implementation 'io.github.d4viddf:hyperisland_kit:0.4.3'
+    // Wearable Data Layer – phone ↔ WearOS communication
+    implementation 'com.google.android.gms:play-services-wearable:18.2.0'
+    // WorkManager – daily 7 AM morning sync to watch
+    implementation 'androidx.work:work-runtime-ktx:2.10.1'
 }

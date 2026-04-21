@@ -67,6 +67,7 @@ import 'package:folio_kreta_api/providers/note_provider.dart';
 import 'package:folio_kreta_api/providers/timetable_provider.dart';
 import 'package:folio/api/providers/user_provider.dart';
 import 'package:folio/api/providers/update_provider.dart';
+import 'package:folio/api/providers/wear_provider.dart';
 import 'package:folio_mobile_ui/pages/grades/calculator/grade_calculator_provider.dart';
 import 'package:flutter_displaymode/flutter_displaymode.dart';
 
@@ -209,6 +210,11 @@ class _AppState extends State<App> {
         ),
         ChangeNotifierProvider<SelfNoteProvider>(
           create: (context) => SelfNoteProvider(context: context),
+        ),
+
+        // WearOS sync
+        ChangeNotifierProvider<WearProvider>(
+          create: (_) => WearProvider(),
         ),
 
         // third party providers
