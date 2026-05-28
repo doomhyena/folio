@@ -47,7 +47,19 @@ void main() async {
 
     if (!kIsWeb) {
       try {
-        await Firebase.initializeApp();
+        await Firebase.initializeApp(
+          name: defaultFirebaseAppName,
+          options: const FirebaseOptions(
+            apiKey: "AIzaSyA_SnXigQkSvFuB5ECpgz8pZ1SjKzuKiFo",
+            appId: "1:694136934013:android:2d6873f63e005250",
+            androidClientId:
+                "694136934013-6e2jmrbqume6lt92d2ceb5se6uru4uvm.apps.googleusercontent.com",
+            projectId: "ellenorzo-v2",
+            messagingSenderId: "694136934013",
+            storageBucket: "ellenorzo-v2.appspot.com",
+            databaseURL: "https://ellenorzo-v2.firebaseio.com",
+          ),
+        );
       } catch (e) {
         debugPrint('Firebase init skipped: $e');
       }
