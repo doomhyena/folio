@@ -130,9 +130,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin {
         Future.delayed(const Duration(seconds: 1))
             .then((value) => mounted ? _confettiController?.play() : null);
       }
-    } else if (now.isAfter(DateTime(now.year, DateTime.may, 28)) &&
-        now.isBefore(DateTime(now.year, DateTime.may, 30))) {
-      greeting = "folioopen";
+    } else if (now.month == DateTime.march && now.day == 28) {
+      final age = now.year - 2025;
+      greeting = Localization("folioopen".i18n).fill([age]);
+      customWelcome = true;
 
       if (NavigationScreen.of(context)?.init("confetti") ?? false) {
         _confettiController =
